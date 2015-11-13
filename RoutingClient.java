@@ -55,8 +55,7 @@ public class RoutingClient {
 
 	public static void adjacenyToEdges(double[][] matrix, List<Node> v)
 	{
-		for(int i = 0; i < matrix.length; i++)
-		{
+        for(int i = 0; i < matrix.length; i++) {
 			v.get(i).neighbors = new Edge[matrix.length];
 			for(int j = 0; j < matrix.length; j++)
 			{
@@ -67,11 +66,36 @@ public class RoutingClient {
 	public static void computePaths(Node source)
 	{
 		// Complete the body of this function
+        PriorityQueue<Node> unvisited = new PriorityQueue<Node>();
+
+        // first add the source node
+        unvisited.add(source);
+        source.minDistance = 0;
+
+        while(unvisited.size() != 0){
+            Node src = unvisited.poll();
+            for (Edge edge : src.neighbors){
+                Node target = edge.target;
+                double distThroughSrc = src.minDistance + edge.weight;
+                if(Double.isInfinite(target.minDistance) || distThroughSrc < target.minDistance){
+                    unvisited.remove(target);
+                    target.minDistance = distThroughSrc;
+                    target.previous = src;
+                    unvisited.add(target);
+                }
+            }
+        }
 	}
 
 	public static List<Integer> getShortestPathTo(Node target)
 	{
-		// Complete the body of this function
+        List<Integer> path = new ArrayList<Integer>();
+        while(target != null){
+            path.add(target.name);
+            target = target.previous;
+        }
+        Collections.reverse(path);
+        return path;
 	}
 
 	/**
@@ -131,22 +155,32 @@ public class RoutingClient {
 			while(socket!=null && socket.isConnected() && !socket.isClosed()){
 				System.out.println("Enter number of nodes in the network, 0 to Quit: ");
 				int noNodes = scr.nextInt();
-				
+			
 
 				// Send noNodes to the server, and read a String from it containing adjacency matrix
-				
-						// Complete the code here 
+                writer.write(noNodes);
+                String adjacency_mat = reader.readLine();
 				
 				// Create an adjacency matrix after reading from server
 				double[][] matrix = new double[noNodes][noNodes];
 				
 				// Use StringToenizer to store the values read from the server in matrix
-				
-						// Complete the code here 
-				
+                StringTokenizer st = new StringTokenizer(adjacency_mat);
+                int i, j;
+                for(i = 0; i < noNodes; i++){
+                    for(j = 0; j < noNodes; j++){
+                        String tok = st.nextToken();
+                        matrix[i][j] = Double.parseDouble(tok);
+                    }
+                }
+                if(st.hasMoreTokens()){
+                    System.out.println("ERROR: Not all tokens are completely parsed!");
+                    throw new NullPointerException();
+                }
+
 				//The nodes are stored in a list, nodeList
 				List<Node> nodeList = new ArrayList<Node>();
-				for(int i = 0; i < noNodes; i++){
+				for(i = 0; i < noNodes; i++){
 					nodeList.add(new Node(i));
 				}
 				
@@ -154,10 +188,28 @@ public class RoutingClient {
 				adjacenyToEdges(matrix, nodeList);
 				
 				// Finding shortest path for all nodes
-				
-						// Complete the code here 
-				
-				
+                for(i = 0; i < noNodes; i++){
+                    // first compute the shortest path from i
+                    computePaths(nodeList.get(i));
+                    System.out.println("Node " + i + ":");
+                    for(j = 0; j < noNodes; j++){
+                        // get the shortest path
+                        List<Integer> path = getShortestPathTo(nodeList.get(j));
+                        // compute total time
+                        int path_size = path.size();
+                        int k;
+                        double total_time = 0;
+                        for(k = 0; k < path_size - 1; k++){
+                            total_time += matrix[path.get(k)][path.get(k+1)];
+                        }
+                        System.out.println("To node " + j + " is " + total_time + "ms, path " + path);
+                    }
+                    // reset all distances and paths
+                    for (Node n : nodeList){
+                        n.previous = null;
+                        n.minDistance = Double.POSITIVE_INFINITY;
+                    }
+                }
 				socket.close();
 			}
 			System.out.println("Quit");
