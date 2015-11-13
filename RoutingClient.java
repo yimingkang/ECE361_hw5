@@ -156,7 +156,11 @@ public class RoutingClient {
 				System.out.println("Enter number of nodes in the network, 0 to Quit: ");
 				int noNodes = scr.nextInt();
 			
-
+                if (noNodes == 0){
+                    System.out.println("Quitting...");
+                    socket.close();
+                    return;
+                }
 				// Send noNodes to the server, and read a String from it containing adjacency matrix
                 writer.write(noNodes);
                 String adjacency_mat = reader.readLine();
